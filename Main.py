@@ -1,16 +1,22 @@
-# Trabalho Final - Teoria das Estruturas de Dados
-# Simulador de Sistema Operacional (Tema 3)
-# Aluno: Daniel Santos Abreu
+"""
+Trabalho Final - Teoria das Estruturas de Dados
+Simulador de Sistema Operacional (Tema 3)
+Aluno: Daniel Santos Abreu
+"""
 
-
-from collections import deque # "deque" é a fila de duas pontas: permite tirar do início e do fim de forma rápida.
+# "deque" é a fila do Python: permite tirar do início (popleft) de forma rápida.
+from collections import deque
+# "datetime" dá a data e hora atuais, usadas para identificar cada salvamento no arquivo.
+from datetime import datetime
 
 ARQUIVO = "dados_sistema.txt" # arquivo de persistência
 DELIM = "|" # separador de campos no arquivo
 QUANTUM = 2 # fatia de tempo de CPU para cada processo (round-robin)
 
 # VARIÁVEIS
-# Estas quatro variáveis globais são a "memória" do programa e são usadas por várias funções.
+# Estas quatro variáveis são a "memória" do programa. Elas começam vazias
+# (o enunciado proíbe dados pré-carregados) e ficam fora de qualquer função
+# para que todas as funções possam enxergá-las.
 
 tabela_processos = []   # LISTA: cada item é um dicionário {pid, nome, prioridade, estado}
 fila_cpu = deque()      # FILA: cada item é [pid, nome, tempo_restante]
@@ -26,7 +32,8 @@ proximo_pid = 1         # contador para gerar PIDs automaticamente
 # FUNÇÕES DE ENTRADA
 # Estas funções existem para não repetir validação de digitação em todo lugar.
 
-def ler_texto(msg): # Lê texto não vazio e sem o delimitador (que corromperia o arquivo).
+def ler_texto(msg):
+    # Lê texto não vazio e sem o delimitador (que corromperia o arquivo).
     while True:                       # repete até o usuário digitar algo válido
         valor = input(msg).strip()    # strip() remove espaços do começo e do fim
         if not valor:                 # string vazia é "falsa" em Python
@@ -36,7 +43,8 @@ def ler_texto(msg): # Lê texto não vazio e sem o delimitador (que corromperia 
         else:
             return valor              # valor válido: sai do loop devolvendo o texto
 
-def ler_inteiro(msg, minimo=1): # Lê um inteiro >= minimo, repetindo até ser válido.
+def ler_inteiro(msg, minimo=1):
+    # Lê um inteiro >= minimo, repetindo até ser válido.
     while True:
         try:
             n = int(input(msg).strip())   # se digitar letras, int() gera ValueError
@@ -46,12 +54,15 @@ def ler_inteiro(msg, minimo=1): # Lê um inteiro >= minimo, repetindo até ser v
         except ValueError:                # cai aqui quando o texto não é um número
             print("  ! Entrada inválida: digite um número inteiro.")
 
-def confirmar(msg): # Pergunta s/n. Devolve True só se o usuário digitar "s" (ou "S").
+def confirmar(msg):
+    # Pergunta s/n. Devolve True só se o usuário digitar "s" (ou "S").
     return input(msg + " (s/n): ").strip().lower() == "s"
 
 # LISTA - TABELA DE PROCESSOS
 
-def buscar_processo(pid): # Busca de forma linear por chave (PID) na lista; retorna o dict ou None. Olha processo por processo até achar.
+def buscar_processo(pid):
+    # Busca por chave (PID) na lista; retorna o dict ou None.
+    # É a busca linear: olha um por um até achar. Várias funções usam esta.
     for p in tabela_processos:        # p é um dicionário de processo
         if p["pid"] == pid:
             return p                  # achou: devolve o próprio dicionário (não uma cópia)
@@ -61,7 +72,8 @@ def criar_processo():
     global proximo_pid                # "global" é necessário porque vamos REATRIBUIR a variável
     nome = ler_texto("Nome do processo: ")
     prioridade = ler_inteiro("Prioridade (1 = mais alta): ")
-    proc = {"pid": proximo_pid, "nome": nome, "prioridade": prioridade, "estado": "Novo"} # Monta o registro do processo como um dicionário. O PID vem do contador.
+    # Monta o registro do processo como um dicionário. O PID vem do contador.
+    proc = {"pid": proximo_pid, "nome": nome, "prioridade": prioridade, "estado": "Novo"}
     tabela_processos.append(proc)      # inserção no fim da lista
     print(f"  Processo criado com PID {proximo_pid}.")
     proximo_pid += 1                  # prepara o próximo PID (nunca repete)
@@ -70,11 +82,14 @@ def listar_processos():
     if not tabela_processos:          # lista vazia é "falsa"
         print("  (tabela de processos vazia)")
         return                        # sai da função sem imprimir a tabela
-    print(f"  {'IDX':<4}{'PID':<6}{'NOME':<20}{'PRIOR.':<8}ESTADO") # Em f-strings, {texto:<20} significa "alinhar à esquerda em 20 caracteres" (colunas alinhadas).
-    for i, p in enumerate(tabela_processos): # enumerate() entrega o índice (i) junto com cada item (p).
+    # Em f-strings, {texto:<20} significa "alinhar à esquerda em 20 caracteres" (colunas alinhadas).
+    print(f"  {'IDX':<4}{'PID':<6}{'NOME':<20}{'PRIOR.':<8}ESTADO")
+    # enumerate() entrega o índice (i) junto com cada item (p).
+    for i, p in enumerate(tabela_processos):
         print(f"  {i:<4}{p['pid']:<6}{p['nome']:<20}{p['prioridade']:<8}{p['estado']}")
 
-def consultar_processo(): # ler_inteiro está dentro da chamada de buscar_processo: digita o PID e já busca.
+def consultar_processo():
+    # Aqui ler_inteiro está dentro da chamada de buscar_processo: digita o PID e já busca.
     p = buscar_processo(ler_inteiro("PID: "))
     if p:                             # p é None (falso) quando não achou
         print(f"  PID {p['pid']} | {p['nome']} | prioridade {p['prioridade']} | {p['estado']}")
@@ -87,28 +102,34 @@ def atualizar_processo():
         print("  Processo não encontrado.")
         return
     print("  (deixe em branco para manter o valor atual)")
-    nome = input(f"  Novo nome [{p['nome']}]: ").strip() # input() puro é usado (e não ler_texto) porque vazio é permitido: significa "manter".
+    # Aqui usamos input() puro (e não ler_texto) porque vazio é permitido: significa "manter".
+    nome = input(f"  Novo nome [{p['nome']}]: ").strip()
     if nome and DELIM not in nome:    # só troca se digitou algo E não tem "|"
         p["nome"] = nome              # como p é o dicionário da lista, isto altera a tabela direto
     prior = input(f"  Nova prioridade [{p['prioridade']}]: ").strip()
-    if prior.isdigit() and int(prior) >= 1: # isdigit() garante que só tem dígitos, então int() não vai dar erro
+    # isdigit() garante que só tem dígitos, então int() não vai dar erro
+    if prior.isdigit() and int(prior) >= 1:
         p["prioridade"] = int(prior)
     print("  Processo atualizado.")
+
 
 def remover_processo():
     pid = ler_inteiro("PID do processo a remover: ")
     p = buscar_processo(pid)
     if not p:
         print("  Processo não encontrado.")
-    elif any(item[0] == pid for item in fila_cpu): # devolve True se algum item da fila tiver este PID (item[0] é o pid)
-        print("  ! Processo está na fila da CPU. Execute-o até terminar antes de removê-lo.") # Mantém a consistência: a fila só perde elementos pelo início
+    # any(...) devolve True se ALGUM item da fila tiver este PID (item[0] é o pid)
+    elif any(item[0] == pid for item in fila_cpu):
+        # Mantém a consistência: a fila só perde elementos pelo início
+        print("  ! Processo está na fila da CPU. Execute-o até terminar antes de removê-lo.")
     else:
         tabela_processos.remove(p)    # remove() apaga o item da lista comparando pelo valor
         print("  Processo removido.")
 
 # FILA - ESCALONAMENTO DE PROCESSOS NA CPU (round-robin)
 
-def enfileirar_processo(): # inserção no FIM da fila (enqueue).
+def enfileirar_processo():
+    # Inserção no FIM da fila (enqueue).
     pid = ler_inteiro("PID do processo a escalonar: ")
     p = buscar_processo(pid)
     if not p:                         # só dá para escalonar quem existe na tabela
@@ -128,11 +149,15 @@ def listar_fila():
         print("  (fila vazia)")
         return
     print("  Início da fila (próximo a executar) -> fim")
-    for pos, (pid, nome, tempo) in enumerate(fila_cpu, start=1): # cada item da fila é [pid, nome, tempo]; o "for" já separa nas três variáveis. start=1 faz a contagem das posições começar em 1.
+    # Cada item da fila é [pid, nome, tempo]; o "for" já separa nas três variáveis.
+    # start=1 faz a contagem das posições começar em 1 (mais natural para o usuário).
+    for pos, (pid, nome, tempo) in enumerate(fila_cpu, start=1):
         print(f"  {pos}. PID {pid} | {nome} | restante: {tempo}")
 
 
-def executar_proximo(): # remoção no INÍCIO da fila (dequeue). Executa um quantum; se sobrar tempo, o processo volta ao FIM da fila seguindo o escalonamento round-robin.
+def executar_proximo():
+    # Remoção no INÍCIO da fila (dequeue). Executa um quantum; se sobrar
+    # tempo, o processo volta ao FIM da fila (Round-Robin).
     if not fila_cpu:
         print("  Fila vazia: nenhum processo para executar.")
         return
@@ -141,18 +166,21 @@ def executar_proximo(): # remoção no INÍCIO da fila (dequeue). Executa um qua
     usado = min(QUANTUM, tempo)             # usa no máximo QUANTUM; se faltar menos, usa só o que falta
     tempo -= usado                          # desconta o tempo usado do que restava
     print(f"  CPU executou PID {pid} ({nome}) por {usado} unidade(s).")
-    if tempo > 0: # ainda não terminou: volta para o FIM da fila (é isso que faz o rodízio)
+    if tempo > 0:
+        # Ainda não terminou: volta para o FIM da fila (é isso que faz o rodízio)
         fila_cpu.append([pid, nome, tempo])
         if p:                         # "if p" protege caso o processo não exista mais na tabela
             p["estado"] = "Pronto"
         print(f"  Restam {tempo} unidade(s): volta ao fim da fila.")
-    else: # tempo zerou: NÃO volta para a fila, e a tabela marca como finalizado
+    else:
+        # Tempo zerou: NÃO volta para a fila, e a tabela marca como finalizado
         if p:
             p["estado"] = "Finalizado"
         print("  Processo finalizado.")
 
 
-def atualizar_fila(): # altera o tempo restante de um item da fila (sem mudar sua ordem).
+def atualizar_fila():
+    # Altera o tempo restante de um item da fila (sem mudar sua ordem).
     listar_fila()                     # mostra a fila para o usuário escolher a posição
     if not fila_cpu:                  # fila vazia: não há o que atualizar
         return
@@ -160,20 +188,25 @@ def atualizar_fila(): # altera o tempo restante de um item da fila (sem mudar su
     if pos > len(fila_cpu):
         print("  Posição inválida.")
         return
-    fila_cpu[pos - 1][2] = ler_inteiro("Novo tempo restante: ") # O usuário vê posições começando em 1, mas o deque começa em 0, daí o "pos - 1". O "[2]" é o terceiro campo do item [pid, nome, tempo], ou seja, o tempo restante.
+    # O usuário vê posições começando em 1, mas o deque começa em 0, daí o "pos - 1".
+    # O "[2]" é o terceiro campo do item [pid, nome, tempo], ou seja, o tempo restante.
+    fila_cpu[pos - 1][2] = ler_inteiro("Novo tempo restante: ")
     print("  Item atualizado.")
 
 # PILHA - CHAMADAS DE SUB-ROTINAS E INTERRUPÇÕES
 
-def empilhar(): # Push: insere no TOPO (final da list).
-    print("  Tipo: 1) Sub-rotina  2) Interrupção") # Expressão condicional: se digitou "2" vira INTERRUPCAO; qualquer outra coisa vira SUBROTINA.
+def empilhar():
+    # Push: insere no TOPO (final da list).
+    print("  Tipo: 1) Sub-rotina  2) Interrupção")
+    # Expressão condicional: se digitou "2" vira INTERRUPCAO; qualquer outra coisa vira SUBROTINA.
     tipo = "INTERRUPCAO" if input("  Escolha: ").strip() == "2" else "SUBROTINA"
     desc = ler_texto("Descrição (ex.: funcao_leitura, IRQ_teclado): ")
     pilha_chamadas.append([tipo, desc])    # append no fim da lista = topo da pilha
     print(f"  {tipo} empilhada.")
 
 
-def desempilhar(): # Pop: remove do TOPO.
+def desempilhar():
+    # Pop: remove do TOPO.
     if not pilha_chamadas:
         print("  Pilha vazia.")
         return
@@ -181,28 +214,34 @@ def desempilhar(): # Pop: remove do TOPO.
     print(f"  Retorno de {tipo}: {desc}")
 
 
-def ver_topo(): # essa função apenas LÊ o topo, não o remove (diferente do pop).
+def ver_topo():
     if not pilha_chamadas:
         print("  Pilha vazia.")
     else:
-        print(f"  Topo: {pilha_chamadas[-1][0]} - {pilha_chamadas[-1][1]}") # [-1] é o último elemento (o topo). [0] é o tipo e [1] é a descrição.
+        # [-1] é o último elemento (o topo). [0] é o tipo e [1] é a descrição.
+        # Aqui só LEMOS o topo, não removemos (diferente do pop).
+        print(f"  Topo: {pilha_chamadas[-1][0]} - {pilha_chamadas[-1][1]}")
 
 
-def listar_pilha(): # mostra a pilha do topo para a base
+def listar_pilha():
     if not pilha_chamadas:
         print("  (pilha vazia)")
         return
     print("  TOPO")
-    for tipo, desc in reversed(pilha_chamadas): # reversed() percorre de trás para frente, assim o topo (último) aparece primeiro.
-        print(f"   | {tipo:<12} {desc}") # {tipo:<12} alinha a coluna do tipo em 12 caracteres.
+    # reversed() percorre de trás para frente, assim o topo (último) aparece primeiro.
+    # {tipo:<12} alinha a coluna do tipo em 12 caracteres.
+    for tipo, desc in reversed(pilha_chamadas):   # mostra do topo para a base
+        print(f"   | {tipo:<12} {desc}")
     print("  BASE")
 
 
-def atualizar_topo(): # Só o topo pode ser alterado, respeitando o acesso LIFO.
+def atualizar_topo():
+    # Só o topo pode ser alterado, respeitando o acesso LIFO.
     if not pilha_chamadas:
         print("  Pilha vazia.")
         return
-    pilha_chamadas[-1][1] = ler_texto("Nova descrição do topo: ") # [-1] é o topo; [1] é a descrição dele. Troca só a descrição, o tipo continua.
+    # [-1] é o topo; [1] é a descrição dele. Troca só a descrição, o tipo continua.
+    pilha_chamadas[-1][1] = ler_texto("Nova descrição do topo: ")
     print("  Topo atualizado.")
 
 # ÁRVORE - SISTEMA DE ARQUIVOS (dicionários aninhados)
@@ -319,7 +358,11 @@ def remover_no():
     print("  Removido.")
 
 # PERSISTÊNCIA EM ARQUIVO TXT
+# O arquivo NUNCA é sobrescrito: cada salvamento é ACRESCENTADO ao final.
+# Para saber onde começa cada salvamento, ele inicia com uma linha de marcação.
+# Ao carregar, só o ÚLTIMO salvamento (o estado mais recente) é reconstruído.
 # Formatos:
+#   SALVAMENTO|data e hora         (marca o início de cada salvamento)
 #   LISTA|pid|nome|prioridade|estado
 #   FILA|pid|nome|tempo_restante
 #   PILHA|tipo|descricao           (da base para o topo)
@@ -341,9 +384,13 @@ def linhas_arvore(no, caminho):
 
 def salvar_dados():
     try:
-        # "w" = escrita: APAGA o conteúdo anterior e grava de novo.
+        # "a" = acréscimo (append): se o arquivo já existe, o conteúdo anterior é
+        # MANTIDO e o que gravarmos vai para o final; se não existe, ele é criado.
         # O "with" fecha o arquivo sozinho no final, mesmo se der erro.
-        with open(ARQUIVO, "w", encoding="utf-8") as f:
+        with open(ARQUIVO, "a", encoding="utf-8") as f:
+            # Linha de marcação: diz onde começa este salvamento. strftime formata a data/hora.
+            agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(DELIM.join(["SALVAMENTO", agora]) + "\n")
             for p in tabela_processos:
                 # Todo campo precisa virar texto (str) antes de juntar. "\n" termina a linha.
                 f.write(DELIM.join(["LISTA", str(p["pid"]), p["nome"],
@@ -375,6 +422,15 @@ def carregar_dados():
     except OSError as erro:
         print(f"  Erro ao ler: {erro}")
         return
+
+    # O arquivo acumula vários salvamentos. Procuramos a ÚLTIMA linha de marcação
+    # e descartamos tudo o que vem antes dela, ficando só com o estado mais recente.
+    # Se não houver nenhuma marcação (arquivo sem ela), "inicio" fica 0 e lemos tudo.
+    inicio = 0
+    for i, linha in enumerate(linhas):
+        if linha.startswith("SALVAMENTO" + DELIM):
+            inicio = i + 1            # o bloco começa na linha SEGUINTE à marcação
+    linhas = linhas[inicio:]          # fatia: do início do último bloco até o fim
 
     # Limpa a memória (mesmos objetos, para manter as referências globais)
     # clear() esvazia o objeto existente. Se fizéssemos "tabela_processos = []"

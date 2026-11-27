@@ -44,9 +44,12 @@ Diretórios e arquivos formam uma **hierarquia** (um pai, vários filhos). Cada 
 
 ## Persistência (`dados_sistema.txt`)
 
-Um único arquivo texto, uma linha por registro, campos separados por `|` (o caractere é bloqueado nas entradas para não corromper o arquivo):
+Um único arquivo texto, uma linha por registro, campos separados por `|` (o caractere é bloqueado nas entradas para não corromper o arquivo).
+
+O arquivo **nunca é sobrescrito**: cada salvamento é acrescentado ao final (modo `"a"`) e começa com uma linha `SALVAMENTO|data e hora`. Ao carregar, o sistema reconstrói apenas o **último** salvamento, ou seja, o estado mais recente; os anteriores ficam preservados como histórico.
 
 ```
+SALVAMENTO|data e hora
 LISTA|pid|nome|prioridade|estado
 FILA|pid|nome|tempo_restante
 PILHA|tipo|descricao                  (gravada da base para o topo)
@@ -56,6 +59,7 @@ ARVORE|DIR ou ARQ|nome1|nome2|...     (caminho completo; pais antes dos filhos)
 Exemplo:
 
 ```
+SALVAMENTO|2026-11-26 20:49:00
 LISTA|1|init|1|Pronto
 LISTA|2|shell|2|Novo
 FILA|1|init|3
@@ -65,7 +69,7 @@ ARVORE|DIR|home
 ARVORE|ARQ|home|notas.txt
 ```
 
-Ao carregar, as estruturas em memória são esvaziadas e reconstruídas linha a linha; linhas inválidas são ignoradas e contabilizadas, e o contador de PIDs continua após o maior PID lido.
+Ao carregar, as estruturas em memória são esvaziadas e reconstruídas linha a linha a partir do último salvamento; linhas inválidas são ignoradas e contabilizadas, e o contador de PIDs continua após o maior PID lido.
 
 ## Estrutura do código (`main.py`)
 
