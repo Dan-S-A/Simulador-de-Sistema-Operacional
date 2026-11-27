@@ -12,8 +12,6 @@ Requisitos: Python 3.8 ou superior (apenas biblioteca padrão, nada a instalar).
 python main.py
 ```
 
-(em Linux/macOS pode ser necessário usar `python3 main.py`)
-
 O sistema inicia **vazio**. Navegue pelo menu numérico:
 
 | Opção | Módulo |
